@@ -1,52 +1,29 @@
-# OpsGuru Hiring Assessment
+# OpsGuru Hiring Assessment – Wiki.js Infrastructure
 
-## Problem
+##  Problem
+Build a secure, scalable, observable, and automated cloud infrastructure for Wiki.js using IaC.
 
-### Scenario
+##  Solution Highlights
+- **Cloud**: AWS
+- **IaC**: Terraform (modular)
+- **Compute**: ECS Fargate
+- **DB**: RDS PostgreSQL
+- **Secrets**: AWS Secrets Manager
+- **Monitoring**: CloudWatch Logs
+- **Security**: Scoped Security Groups, IAM roles
+- **Scaling**: ECS service with ALB target  Structure
+- `modules/` – Reusable Terraform modules (vpc, alb, rds, ecs, iam, security, secrets)
+- `main.tf` – Composition of modules
+- `terraform.tfvars` – Secrets/parameters
+- `outputs.tf` – Useful outputs like ALB URL
 
-Your company is building an internal knowledge management platform for enterprise teams. The goal is to allow employees to collaborate on documentation, store company policies, and manage technical knowledge in a structured way.
+##  Security Considerations
+- Secrets stored in AWS Secrets Manager
+- ALB Security Group limited to ports 80/443
+- RDS only accessible from ECS tasks
+- IAM roles per best practices
 
-To achieve this, your team has chosen [Wiki.js](https://js.wiki/), an open-source, self-hosted wiki platform that provides a powerful editor, authentication options, and content organization features.
-
-### Objective
-
-Your task is to design and deploy the infrastructure required to host Wiki.js on a cloud provider of your choice (AWS, GCP, or Azure) using Infrastructure as Code (Terraform, CDKs, Pulumi or cloud-specific IaC tools).
-
-## Solution
-
-### Requirements
-
-Your deployment should ensure the following:
-
-- Reliability: The solution should be highly available and able to handle multiple users.
-- Security: The infrastructure should follow security best practices.
-- Scalability: The deployment should accommodate growth over time.
-- Observability: The system should have monitoring, logging, and alerting capabilities.
-- Automation: The entire setup should be automated using IaC.
-
-### Considerations
-
-- Compute: Decide how you will run Wiki.js.
-- Storage: Consider database and file storage requirements.
-- Networking: Ensure the system is securely accessible.
-- Scaling: Think about how to handle traffic spikes.
-- Monitoring: Implement basic observability.
-
-## Instructions
-
-### Deliverables
-
-1. Infrastructure as Code (IaC) implementation.
-2. Architecture diagram showing the relevant components.
-3. Deployment documentation, including instructions for setup and teardown.
-4. Security considerations for handling sensitive data, authentication, and access control.
-
-### Optional Resources
-
-- [Wiki.js](https://js.wiki/)
-- [Wiki.js Documentation](https://docs.requarks.io/)
-- [Wiki.js GitHub Repository](https://github.com/Requarks/wiki)
-
-## Documentation
-
-Any candidate documentation for the solution should be placed in this section.
+##  Setup
+```bash
+terraform init
+terraform apply -var-file="terraform.tfvars"
