@@ -1,0 +1,25 @@
+# === Terraform core files ===
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform/
+.terraform.lock.hcl
+
+# === Sensitive or local environment files ===
+*tfvars*
+
+# === Logs and reports ===
+*.log
+aws_remaining_resources_report.txt
+
+# === Editor / OS ===
+.vscode/
+.idea/
+*.swp
+.DS_Store
+*.bak
+*.tmp
+
+# === Shell scripts output ===
+*.out
+*.err

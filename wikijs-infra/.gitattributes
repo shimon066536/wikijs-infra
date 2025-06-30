@@ -1,0 +1,15 @@
+# Treat all Terraform files as text
+*.tf text
+*.tfvars text
+
+# Force Unix line endings
+*.sh text eol=lf
+
+# Mark Terraform plan files as binary (not diffable)
+*.tfplan binary
+
+# Ensure no BOM
+* text eol=lf
+
+# Ignore report files from appearing in diffs
+aws_remaining_resources_report.txt linguist-generated
