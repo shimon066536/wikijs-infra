@@ -1,3 +1,11 @@
+data "aws_secretsmanager_secret_version" "db_user" {
+  secret_id = var.db_user_arn
+}
+
+data "aws_secretsmanager_secret_version" "db_pass" {
+  secret_id = var.db_pass_arn
+}
+
 resource "aws_db_subnet_group" "wikijs" {
   name       = "wikijs-db-subnet-group"
   subnet_ids = var.private_subnet_ids
@@ -7,15 +15,31 @@ resource "aws_db_subnet_group" "wikijs" {
   }
 }
 
+resource "aws_db_parameter_group" "wikijs_pg_params" {
+  name        = "wikijs-pg-no-ssl"
+  family      = "postgres17"
+  description = "Disable SSL for Wiki.js testing"
+
+  parameter {
+    name  = "rds.force_ssl"
+    value = "0"
+  }
+
+  tags = {
+    Name = "wikijs-db-params"
+  }
+}
+
 resource "aws_db_instance" "wikijs" {
   identifier         = "wikijs-db"
   engine             = "postgres"
   instance_class     = "db.t3.micro"
   allocated_storage  = 20
-  username           = local.db_credentials.username
-  password           = local.db_credentials.password
+  username           = data.aws_secretsmanager_secret_version.db_user.secret_string
+  password           = data.aws_secretsmanager_secret_version.db_pass.secret_string
   db_name            = "wikijs"
   port               = 5432
+  parameter_group_name = aws_db_parameter_group.wikijs_pg_params.name
 
   vpc_security_group_ids = [var.db_sg_id]
   db_subnet_group_name   = aws_db_subnet_group.wikijs.name
@@ -27,8 +51,4 @@ resource "aws_db_instance" "wikijs" {
   tags = {
     Name = "wikijs-db"
   }
-}
-
-locals {
-  db_credentials = jsondecode(var.db_credentials_json)
 }

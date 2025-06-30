@@ -26,4 +26,7 @@ Build a secure, scalable, observable, and automated cloud infrastructure for Wik
 ##  Setup
 ```bash
 terraform init
+terraform validate
+terraform plan -out=tfplan -var-file="terraform.tfvars"
 terraform apply -var-file="terraform.tfvars"
+```

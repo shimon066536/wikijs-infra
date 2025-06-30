@@ -1,15 +1,9 @@
-variable "secret_name" {
-  description = "The name of the secret"
+variable "db_username" {
+  description = "DB credentials as JSON string"
   type        = string
 }
 
-variable "secret_description" {
-  description = "A description of the secret"
-  type        = string
-  default     = "Credentials for Wiki.js RDS PostgreSQL"
-}
-
-variable "db_credentials_json" {
+variable "db_password" {
   description = "DB credentials as JSON string"
   type        = string
 }

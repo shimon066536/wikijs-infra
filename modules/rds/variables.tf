@@ -8,7 +8,12 @@ variable "db_sg_id" {
   type        = string
 }
 
-variable "db_credentials_json" {
-  type        = string
-  description = "DB credentials pulled from Secrets Manager"
+variable "db_user_arn" {
+  type    = string
+  description = "ARN of the Secrets Manager secret"
+}
+
+variable "db_pass_arn" {
+  type    = string
+  description = "ARN of the Secrets Manager secret"
 }

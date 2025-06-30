@@ -9,3 +9,7 @@ output "ecs_tasks_sg_id" {
 output "rds_sg_id" {
   value = aws_security_group.rds_sg.id
 }
+
+output "security_group_ids" {
+  value = aws_security_group.vpc_endpoint_sg.id
+}

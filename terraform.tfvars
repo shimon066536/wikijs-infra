@@ -1,6 +1,5 @@
-db_credentials_json = <<EOT
-{
-  "username": "wikijsadmin",
-  "password": "StrongPassw0rd"
-}
-EOT
+db_username = "wikijsadmin"
+
+db_password = "StrongPassw0rd"
+
+region = "eu-west-1"
