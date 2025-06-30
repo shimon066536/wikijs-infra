@@ -56,13 +56,12 @@ resource "aws_security_group" "ecs_tasks_sg" {
 
 resource "aws_security_group" "rds_sg" {
   name        = "wikijs-rds-sg"
-  description = "Allow PostgreSQL from ECS tasks only"
   vpc_id      = var.vpc_id
-
+  description = "Allow PostgreSQL from ECS tasks only"
   ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
     security_groups = [aws_security_group.ecs_tasks_sg.id]
   }
 
@@ -75,5 +74,28 @@ resource "aws_security_group" "rds_sg" {
 
   tags = {
     Name = "wikijs-rds-sg"
+  }
+}
+
+resource "aws_security_group" "vpc_endpoint_sg" {
+  name   = "vpc-endpoints-sg"
+  vpc_id = var.vpc_id
+
+  ingress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    cidr_blocks     = var.private_subnet_cidrs
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "vpc-endpoints-sg"
   }
 }
