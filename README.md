@@ -1,4 +1,4 @@
-# Wiki.js Infrastructure – OpsGuru Hiring Assessment
+# Wiki.js Infrastructure
 
 ## Overview
 
