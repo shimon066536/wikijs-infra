@@ -18,10 +18,11 @@ resource "aws_security_group" "alb_sg" {
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTP traffic to ECS tasks"
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = var.private_subnet_cidrs
   }
 
   tags = {
@@ -65,13 +66,6 @@ resource "aws_security_group" "rds_sg" {
     security_groups = [aws_security_group.ecs_tasks_sg.id]
   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   tags = {
     Name = "wikijs-rds-sg"
   }
@@ -86,13 +80,6 @@ resource "aws_security_group" "vpc_endpoint_sg" {
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = var.private_subnet_cidrs
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
