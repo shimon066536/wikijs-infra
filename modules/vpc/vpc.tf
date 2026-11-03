@@ -1,4 +1,10 @@
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
 locals {
+  # Select two AZs in the provider region for both public and private subnets.
+  selected_azs = slice(data.aws_availability_zones.available.names, 0, 2)
   vpc_id             = aws_vpc.main.id
   private_subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
   public_subnet_ids  = [aws_subnet.public_a.id, aws_subnet.public_b.id]
@@ -40,7 +46,7 @@ resource "aws_route_table" "public" {
 resource "aws_subnet" "public_a" {
   vpc_id                  = local.vpc_id
   cidr_block              = "10.0.1.0/24"
-  availability_zone       = "${var.region}a"
+  availability_zone       = local.selected_azs[0]
   map_public_ip_on_launch = false
 
   tags = {
@@ -56,7 +62,7 @@ resource "aws_route_table_association" "public_a" {
 resource "aws_subnet" "public_b" {
   vpc_id                  = local.vpc_id
   cidr_block              = "10.0.2.0/24"
-  availability_zone       = "${var.region}b"
+  availability_zone       = local.selected_azs[1]
   map_public_ip_on_launch = false
 
   tags = {
@@ -100,7 +106,7 @@ resource "aws_route_table" "private" {
 resource "aws_subnet" "private_a" {
   vpc_id            = local.vpc_id
   cidr_block        = "10.0.11.0/24"
-  availability_zone = "eu-west-1a"
+  availability_zone = local.selected_azs[0]
 
   tags = {
     Name = "wikijs-private-a"
@@ -115,7 +121,7 @@ resource "aws_route_table_association" "private_a" {
 resource "aws_subnet" "private_b" {
   vpc_id            = local.vpc_id
   cidr_block        = "10.0.12.0/24"
-  availability_zone = "eu-west-1b"
+  availability_zone = local.selected_azs[1]
 
   tags = {
     Name = "wikijs-private-b"
@@ -132,6 +138,7 @@ resource "aws_vpc_endpoint" "logs" {
   vpc_id             = local.vpc_id
   service_name       = "com.amazonaws.${var.region}.logs"
   vpc_endpoint_type  = "Interface"
+  private_dns_enabled = true
   subnet_ids         = local.private_subnet_ids
   security_group_ids = [var.security_group_ids]
 }
