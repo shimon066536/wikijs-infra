@@ -4,5 +4,5 @@ variable "vpc_id" {
 }
 
 variable "private_subnet_cidrs" {
-  type        = list(string)
+  type = list(string)
 }
