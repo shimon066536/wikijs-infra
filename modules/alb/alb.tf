@@ -1,9 +1,10 @@
 resource "aws_lb" "wikijs_alb" {
-  name               = "wikijs-alb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [var.alb_sg_id]
-  subnets            = var.public_subnets
+  name                       = "wikijs-alb"
+  internal                   = false
+  load_balancer_type         = "application"
+  drop_invalid_header_fields = true
+  security_groups            = [var.alb_sg_id]
+  subnets                    = var.public_subnets
 
   enable_deletion_protection = false
 
