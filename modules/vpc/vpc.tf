@@ -4,7 +4,7 @@ data "aws_availability_zones" "available" {
 
 locals {
   # Select two AZs in the provider region for both public and private subnets.
-  selected_azs = slice(data.aws_availability_zones.available.names, 0, 2)
+  selected_azs       = slice(data.aws_availability_zones.available.names, 0, 2)
   vpc_id             = aws_vpc.main.id
   private_subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
   public_subnet_ids  = [aws_subnet.public_a.id, aws_subnet.public_b.id]
@@ -135,18 +135,19 @@ resource "aws_route_table_association" "private_b" {
 
 
 resource "aws_vpc_endpoint" "logs" {
-  vpc_id             = local.vpc_id
-  service_name       = "com.amazonaws.${var.region}.logs"
-  vpc_endpoint_type  = "Interface"
+  vpc_id              = local.vpc_id
+  service_name        = "com.amazonaws.${var.region}.logs"
+  vpc_endpoint_type   = "Interface"
   private_dns_enabled = true
-  subnet_ids         = local.private_subnet_ids
-  security_group_ids = [var.security_group_ids]
+  subnet_ids          = local.private_subnet_ids
+  security_group_ids  = [var.security_group_ids]
 }
 
 resource "aws_vpc_endpoint" "secretsmanager" {
-  vpc_id             = local.vpc_id
-  service_name       = "com.amazonaws.${var.region}.secretsmanager"
-  vpc_endpoint_type  = "Interface"
-  subnet_ids         = local.private_subnet_ids
-  security_group_ids = [var.security_group_ids]
+  vpc_id              = local.vpc_id
+  service_name        = "com.amazonaws.${var.region}.secretsmanager"
+  vpc_endpoint_type   = "Interface"
+  private_dns_enabled = true
+  subnet_ids          = local.private_subnet_ids
+  security_group_ids  = [var.security_group_ids]
 }
