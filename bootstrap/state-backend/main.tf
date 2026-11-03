@@ -31,6 +31,10 @@ resource "aws_s3_bucket_versioning" "terraform_state" {
   }
 }
 
+# Security exception: SSE-S3 (AES256) is intentionally used for this
+# cost-conscious portfolio backend.
+# Customer-managed KMS encryption is a future hardening option.
+# trivy:ignore:AWS-0132
 resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 

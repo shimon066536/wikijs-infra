@@ -108,3 +108,42 @@ Cost monitoring and tagging strategy
 Contact:
 📧 shimon066536@gmail.com
 🔗 [LinkedIn Profile](https://www.linkedin.com/in/shimon-devops-growth/)
+
+
+## Security Scanning and Accepted Risks
+
+GitHub Actions performs automated Terraform validation,
+Trivy IaC security scanning, and Gitleaks secret scanning.
+
+The following Trivy findings are explicitly documented
+and suppressed at the relevant Terraform resources:
+
+| Rule | Resource | Justification |
+|------|----------|---------------|
+| AWS-0053 | Public ALB | Intentional internet-facing entry point; HTTP redirects to HTTPS |
+| AWS-0104 | ECS Security Group | Outbound HTTPS (TCP 443) is required for public container image pulls and external API access through NAT |
+| AWS-0132 | S3 State Backend | SSE-S3 (AES256) is used to avoid the additional cost and complexity of a customer-managed KMS key |
+
+### Security Trade-offs
+
+- ECS outbound HTTPS destinations remain unrestricted.
+  A future improvement is to use Amazon ECR, VPC endpoints,
+  and tighter outbound network controls.
+- The S3 backend configuration includes encryption,
+  versioning, and public access blocking.
+- Customer-managed KMS encryption can be introduced
+  when additional key control is required.
+- These exceptions represent documented risk acceptance,
+  not the elimination of the underlying risks.
+- This infrastructure has been validated statically.
+  Deployment and runtime behavior have not yet been verified.
+
+### Before Production Deployment
+
+- Configure a real domain and issued ACM certificate.
+- Review network egress and database access controls.
+- Configure production-appropriate RDS backup and
+  recovery settings.
+- Review infrastructure costs and resource lifecycle.
+- Perform an authenticated Terraform plan and
+  integration tests in a controlled AWS environment.

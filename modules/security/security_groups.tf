@@ -30,6 +30,11 @@ resource "aws_security_group" "alb_sg" {
   }
 }
 
+# Security exception: public HTTPS egress is required for Docker Hub
+# image pulls and external AWS API access through the NAT Gateway.
+# Traffic is limited to TCP 443; destination IPs remain unrestricted.
+# Reassess if migrating images to private ECR and VPC endpoints.
+# trivy:ignore:AWS-0104
 resource "aws_security_group" "ecs_tasks_sg" {
   name        = "wikijs-ecs-tasks-sg"
   description = "Allow traffic from ALB"
