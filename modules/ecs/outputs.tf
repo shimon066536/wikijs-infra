@@ -26,3 +26,8 @@ output "db_name" {
 output "db_port" {
   value = var.db_port
 }
+
+output "service_arn" {
+  description = "ARN of the ECS service for least-privilege rotation-triggered deployments"
+  value       = aws_ecs_service.wiki.arn
+}
