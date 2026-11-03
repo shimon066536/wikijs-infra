@@ -1,16 +1,14 @@
 variable "db_username" {
-  type    = string
+  description = "RDS master username"
+  type        = string
+  default     = "wikijs_admin"
 }
 
-variable "db_password" {
-  type    = string
+variable "region" {
+  type = string
 }
 
-variable "region"      {
-  type    = string
-}
-
-variable "name"        {
+variable "name" {
   type    = string
   default = "wikijs"
 }

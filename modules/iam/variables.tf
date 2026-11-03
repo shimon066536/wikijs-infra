@@ -1,7 +1,5 @@
-variable "db_user_arn" {
-  type        = string
-}
 
-variable "db_pass_arn" {
+variable "db_secret_arn" {
+  description = "ARN of the RDS-managed master secret"
   type        = string
 }

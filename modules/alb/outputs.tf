@@ -1,9 +1,9 @@
 output "target_group_arn" {
-  value       = aws_lb_target_group.wikijs_tg.arn
+  value = aws_lb_target_group.wikijs_tg.arn
 }
 
 output "listener_arn" {
-  value       = aws_lb_listener.http.arn
+  value = aws_lb_listener.http.arn
 }
 
 output "lb_dns_name" {

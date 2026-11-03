@@ -43,7 +43,7 @@ resource "aws_subnet" "public_a" {
   availability_zone       = "${var.region}a"
   map_public_ip_on_launch = true
 
-  tags                    = {
+  tags = {
     Name = "wikijs-public-a"
   }
 }
