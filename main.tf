@@ -12,10 +12,11 @@ module "security" {
 }
 
 module "alb" {
-  source         = "./modules/alb"
-  vpc_id         = module.vpc.vpc_id
-  alb_sg_id      = module.security.alb_sg_id
-  public_subnets = module.vpc.public_subnet_ids
+  source              = "./modules/alb"
+  vpc_id              = module.vpc.vpc_id
+  alb_sg_id           = module.security.alb_sg_id
+  public_subnets      = module.vpc.public_subnet_ids
+  acm_certificate_arn = var.acm_certificate_arn
 }
 
 module "rds" {

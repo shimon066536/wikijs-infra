@@ -1,6 +1,7 @@
+
 output "wiki_url" {
-  description = "Public URL of the Wiki.js application"
-  value       = "http://${module.alb.lb_dns_name}"
+  description = "Public HTTPS URL of the Wiki.js application"
+  value       = "https://${var.app_domain_name}"
 }
 
 output "db_address" {
