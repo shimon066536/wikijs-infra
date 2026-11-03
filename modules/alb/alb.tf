@@ -1,3 +1,6 @@
+# Internet-facing ALB is intentional for this public Wiki.js application.
+# HTTPS is served on port 443; HTTP on port 80 redirects to HTTPS.
+# trivy:ignore:AWS-0053
 resource "aws_lb" "wikijs_alb" {
   name                       = "wikijs-alb"
   internal                   = false
