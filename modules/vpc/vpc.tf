@@ -41,9 +41,9 @@ resource "aws_subnet" "public_a" {
   vpc_id                  = local.vpc_id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "${var.region}a"
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
-  tags                    = {
+  tags = {
     Name = "wikijs-public-a"
   }
 }
@@ -57,7 +57,7 @@ resource "aws_subnet" "public_b" {
   vpc_id                  = local.vpc_id
   cidr_block              = "10.0.2.0/24"
   availability_zone       = "${var.region}b"
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   tags = {
     Name = "wikijs-public-b"

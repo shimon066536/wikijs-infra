@@ -22,38 +22,30 @@ variable "target_group_arn" {
   description = "ARN of the ALB Target Group to register the ECS service"
   type        = string
 }
-variable "alb_listener" {
-  description = "Dummy input used in depends_on to ensure LB readiness"
-  type        = any
-}
 variable "db_host" {
-  type = string
+  type        = string
   description = "RDS address (endpoint)"
 }
 variable "db_port" {
-  type    = number
-  default = 5432
+  type        = number
+  default     = 5432
   description = "Port of the database"
 }
 variable "db_type" {
-  type    = string
-  default = "postgres"
+  type        = string
+  default     = "postgres"
   description = "Type of the database (e.g. postgres)"
 }
 variable "db_name" {
-  type    = string
-  default = "wikijs"
+  type        = string
+  default     = "wikijs"
   description = "Name of the database"
 }
-variable "db_user_arn" {
-  type    = string
-  description = "ARN of the Secrets Manager secret used by the ECS Task"
-}
-variable "db_pass_arn" {
-  type    = string
-  description = "ARN of the Secrets Manager secret used by the ECS Task"
-}
 variable "region" {
-  type    = string
-  description = "ARN of the Secrets Manager secret used by the ECS Task"
+  description = "AWS region used for ECS and CloudWatch Logs"
+  type        = string
+}
+variable "db_secret_arn" {
+  description = "ARN of the RDS-managed secret containing database credentials"
+  type        = string
 }

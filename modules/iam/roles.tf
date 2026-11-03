@@ -30,10 +30,7 @@ resource "aws_iam_role_policy" "ecs_task_exec_secrets" {
         Action = [
           "secretsmanager:GetSecretValue"
         ]
-        Resource = [
-          "arn:aws:secretsmanager:eu-west-1:500165950435:secret:wikijs-db-user-*",
-          "arn:aws:secretsmanager:eu-west-1:500165950435:secret:wikijs-db-pass-*"
-        ]
+        Resource = [var.db_secret_arn]
       }
     ]
   })
