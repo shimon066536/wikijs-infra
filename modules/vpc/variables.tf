@@ -1,3 +1,7 @@
-variable "region" {}
+variable "region" {
+  type = string
+}
 
-variable "security_group_ids" {}
+variable "endpoint_security_group_id" {
+  type = string
+}

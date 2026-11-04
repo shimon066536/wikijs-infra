@@ -1,163 +1,92 @@
-# Wiki.js Infrastructure on AWS
+# Wiki.js on AWS with Terraform
 
-Terraform-based infrastructure for [Wiki.js](https://wiki.js.org/), built as a hands-on AWS/DevOps portfolio project and originally developed for a technical hiring assessment.
-
-> **Project status:** Terraform formatting/validation, Trivy IaC scanning, and Gitleaks scanning pass in GitHub Actions on the hardening branch. The infrastructure and S3 backend bootstrap have **not** been deployed or integration-tested in AWS as part of this hardening work. A green CI run is not proof of production readiness.
+I built this project to run Wiki.js on private ECS Fargate tasks behind an HTTPS load balancer, with PostgreSQL on RDS. It began as a technical hiring assessment. Later changes introduced RDS-managed credentials, reproducible image references, and an event-driven request to replace tasks after password rotation.
 
 ## Architecture
 
-```text
-Internet users
-    | HTTPS :443 (HTTP :80 redirects to HTTPS)
-    v
-Public Application Load Balancer
-    | HTTP :3000 (TLS terminates at ALB)
-    v
-Wiki.js on ECS Fargate (private subnets)
-    | PostgreSQL :5432 (SSL configured)
-    v
-Amazon RDS for PostgreSQL (private subnets)
+```mermaid
+flowchart TD
+    User[Wiki user] -->|HTTPS 443| ALB[Public ALB]
+    ALB -->|HTTP 3000| ECS[Private Fargate tasks]
+    ECS -->|PostgreSQL 5432 with TLS configured| RDS[Private RDS PostgreSQL 17]
+    RDS -->|Manages credentials| Secret[Secrets Manager]
+    Secret -->|Injected at task startup| ECS
+    ECS -->|Application logs| Logs[CloudWatch Logs]
 ```
 
-| Component | Implementation |
-| --- | --- |
-| Infrastructure as Code | Terraform modules with AWS provider |
-| Networking | VPC, two public and two private subnets across two available AZs in the selected region; Internet Gateway, NAT Gateway, route tables |
-| Load balancing | Internet-facing ALB; HTTP-to-HTTPS redirect; ACM certificate supplied as an input |
-| Application | Wiki.js container on ECS Fargate, one desired task |
-| Database | Encrypted RDS PostgreSQL 17, private access, SSL enforcement configured |
-| Secrets | RDS-managed master credentials in AWS Secrets Manager, injected into ECS at task start |
-| Access control | IAM ECS task execution role and scoped Security Group ingress/egress |
-| Observability | ECS application logs in CloudWatch Logs (7-day retention configured) |
-| Supporting networking | Interface VPC endpoints for CloudWatch Logs and Secrets Manager with private DNS enabled |
-| Terraform state | Optional S3 backend using SSE-S3, versioning, public-access blocking, and S3 lockfile |
-| Credential rotation recovery | EventBridge `AWSCURRENT` event → Step Functions → ECS `ForceNewDeployment` (configured but not runtime-tested) |
+The VPC has public and private subnets in two AZs. One NAT Gateway provides outbound access, including Docker Hub pulls. Secrets Manager and CloudWatch Logs interface endpoints use private DNS in both private subnets. TLS terminates at the ALB. ALB-to-task traffic uses HTTP inside the VPC.
 
-**TLS boundary:** Client-to-ALB traffic uses HTTPS; ALB-to-ECS traffic is HTTP inside the VPC. Database SSL is configured but has not been verified with a running Wiki.js deployment.
-
-The application image is pinned to **Wiki.js 2.5.314** using the published multi-platform OCI digest (`requarks/wiki:2.5.314@sha256:68f0d1848261ae76492ba358e30a96a76fed5d97a3fff381656082bf90f70d7e`). Update this pin deliberately after reviewing release notes and testing. The Trivy CI container is also pinned to a verified 0.76.1 digest.
+The application image is `requarks/wiki:2.5.317`, pinned by its published OCI index digest. The index includes Linux AMD64 and ARM64 images; the task definition explicitly selects Linux X86_64. Updating the pin requires release review and runtime testing. A version update alone does not demonstrate remediation of every published advisory.
 
 ## Repository layout
 
-```text
-.
-├── .github/workflows/terraform-ci.yml
-├── bootstrap/state-backend/
-│   ├── main.tf
-│   ├── variables.tf
-│   └── outputs.tf
-├── modules/
-│   ├── alb/
-│   ├── ecs/
-│   ├── iam/
-│   ├── rds/
-│   ├── security/
-│   └── vpc/
-├── backend.tf
-├── backend.hcl.example
-├── main.tf
-├── variables.tf
-├── outputs.tf
-├── provider.tf
-├── rotation.tf
-└── README.md
-```
+- Root Terraform files compose the modules and define the S3 backend and rotation workflow.
+- `modules/` contains VPC, security groups, ALB, ECS, IAM, and RDS definitions.
+- `bootstrap/state-backend/` is a separate Terraform root for the state bucket.
+- `tests/` and `bootstrap/state-backend/tests/` contain AWS provider mock tests.
+- `.github/workflows/terraform-ci.yml` validates configuration and scans source history and IaC.
 
-There is **no longer a separate `modules/secrets` module**; the RDS instance manages its master secret.
+## Validation without AWS resources
 
-## Local validation (no AWS resources created)
-
-From the repository root, with Terraform installed:
+Use Terraform 1.14.6 or later within major version 1. CI uses 1.14.6. Provider selections are committed in a lockfile for each root.
 
 ```bash
 terraform init -backend=false -input=false -lockfile=readonly
 terraform fmt -check -recursive
 terraform validate
+terraform test
 
 terraform -chdir=bootstrap/state-backend init -backend=false -input=false -lockfile=readonly
 terraform -chdir=bootstrap/state-backend validate
+terraform -chdir=bootstrap/state-backend test
 ```
 
-These commands initialize providers and check static configuration without activating the remote backend or provisioning AWS infrastructure. They do **not** establish whether an authenticated `terraform plan` or `apply` would succeed.
+The tests use a mocked AWS provider and plan-only runs. They check restricted initial access, private tasks, secret references, database encryption and TLS enforcement, HTTPS routing, application health configuration, and state-bucket public access protection. They require provider downloads but no AWS credentials or resources. They do not exercise AWS APIs, IAM authorization, event delivery, or the application.
 
-## Remote Terraform state (not provisioned)
+CI also runs Trivy configuration scanning for HIGH/CRITICAL findings and Gitleaks on Git history. Actions are pinned to commit SHAs and the Trivy container to a digest. The pipeline does not deploy infrastructure. Inspect the [Actions runs](https://github.com/shimon066536/wikijs-infra/actions) for results on the commit being reviewed.
 
-The root `backend.tf` contains a partial S3 backend configuration:
+## Initial deployment and application setup
 
-- State key: `wikijs-infra/terraform.tfstate`
-- Server-side encryption enabled
-- Native S3 lockfile enabled with `use_lockfile = true`
+Required root inputs are `region`, `app_domain_name`, `acm_certificate_arn`, and `allowed_client_cidrs`. Defaults exist for `name` and `db_username`.
 
-A separate module at `bootstrap/state-backend/` defines the S3 bucket, versioning, default SSE-S3 (AES256) encryption, and S3 public-access blocking. **Having the configuration in Git does not mean the bucket exists.**
+1. Supply an issued ACM certificate in the ALB region and a domain covered by that certificate. DNS and certificate issuance are managed outside this repository.
+2. Set `allowed_client_cidrs` to the operator's public IPv4 address with `/32`. This input intentionally has no default. A fresh Wiki.js database exposes an installation wizard that creates the first administrator.
+3. Initialize the backend, review an authenticated plan, and deploy only after checking cost and cleanup requirements. Use `alb_dns_name` to configure the DNS record.
+4. Complete setup through HTTPS while access is restricted. Confirm administrator login, guest permissions, database connectivity, and `/healthz` behavior.
+5. Broaden `allowed_client_cidrs` deliberately after setup. Public access uses `["0.0.0.0/0"]`.
 
-To enable remote state in a future AWS deployment:
+The ALB checks `/healthz` with status 200. During initial setup, Wiki.js may serve the wizard on this path, so ALB health alone cannot establish setup completion. After setup, check the JSON response and an actual page read. The ECS service allows 120 seconds for startup and enables deployment rollback; this grace period is an initial setting requiring runtime measurement.
 
-1. Review the bootstrap module, target AWS account/region, expected charges, and handling of its **own local bootstrap state**. Decide whether to provision the bucket; this has not been done here.
-2. Only after the bucket exists, copy `backend.hcl.example` to the ignored local file `backend.hcl` and replace its placeholder bucket name and region with the actual values.
-3. From the repository root, initialize using `terraform init -backend-config=backend.hcl` with appropriate AWS credentials. If an existing state needs migration, **back it up and review the migration first**; do not overwrite or discard state.
+## State management
 
-Do not commit `backend.hcl`, `*.tfstate`, `*.tfvars`, credentials, or plan files. The repository's `.gitignore` excludes local Terraform state and variable files.
+The root declares an S3 backend with encryption and native lockfiles. Before backend initialization, provision the bucket using `bootstrap/state-backend/`. Its configuration enables versioning, SSE-S3 encryption, and all four public-access blocks.
 
-## Requirements for a future deployment
+Preserve the bootstrap root's own local state. Copy `backend.hcl.example` to ignored `backend.hcl`, supply the real bucket and region, and run `terraform init -backend-config=backend.hcl`. Back up existing state before a migration. Backend credentials need access to the state object and the `.tflock` object, including permission to delete the lockfile. Backend initialization, concurrent locking, and recovery need AWS verification.
 
-A deployment has **not** been performed or tested by the current CI pipeline. Before attempting one:
+Keep credentials, state, plan files, and local variable files outside Git. The configuration passes the RDS secret ARN into the task definition; ECS resolves its `username` and `password` fields at startup.
 
-- Supply root variables `region`, `app_domain_name`, and `acm_certificate_arn`. The inputs `name` and `db_username` have defaults.
-- Use a real DNS name and an **issued ACM certificate in the same AWS region as the ALB**; arrange the DNS record pointing to the ALB. This Terraform configuration does not create the domain or ACM certificate.
-- Confirm the AWS account and region, an available backend bucket if using remote state, permissions, quotas, resource pricing, and cleanup plan.
-- The VPC uses `aws_availability_zones` to select the first two available AZs **in the configured region**, assigning matching public/private subnets to each. A region must offer at least two usable AZs; the topology and capacity need confirmation at deployment.
-- Run an authenticated `terraform plan` and review all proposed changes before considering `terraform apply`; neither step is validated in CI.
+## Engineering decisions and trade-offs
 
-**Cost warning:** ALB, NAT Gateway, interface VPC endpoints, ECS Fargate, RDS, EventBridge, Step Functions, and related services can incur AWS charges. Local validation and GitHub Actions static checks do not create these resources.
+- **Managed credentials.** RDS owns the master password and its Secrets Manager secret. Terraform does not generate or retrieve the password. The application currently uses the database master account. A dedicated database user should be tested through installation and migrations before changing this model.
+- **Rotation recovery.** A native Secrets Manager `Secret Label Updated` event matches the exact secret ARN and `AWSCURRENT`. EventBridge starts a Standard Step Functions workflow, waits 30 seconds, and requests `ecs:UpdateService` with `ForceNewDeployment`. IAM policies scope each action to its target. Execution success means the API request succeeded. Confirm new task health and a database operation separately. Existing pooled connections can mask an outdated password.
+- **Limited availability.** One desired task, single-AZ RDS, and one NAT Gateway keep the lab smaller. A rolling ECS deployment may temporarily run additional tasks. This topology has interruption risks, including cross-AZ dependency on the NAT. Rollback cannot restore a rotated database password.
+- **Private service access.** Two interface endpoints across two AZs add four endpoint-AZ hourly charges alongside the NAT. They provide private paths to logs and secrets. Removing them is a possible lab cost reduction after reviewing routing requirements.
+- **Disposable database.** The configuration skips a final snapshot on deletion. Treat lab data as disposable until backup retention, deletion protection, and restore procedures have been chosen and tested.
 
-## Continuous integration
+ALB, Fargate, RDS, NAT, public IPv4, interface endpoints, Secrets Manager, logging, and workflow usage can incur charges. Static and mock validation does not provision them. A stopped application does not remove networking and storage charges.
 
-The [Terraform CI workflow](.github/workflows/terraform-ci.yml) runs for pushes to `main` and `harden/**`, pull requests targeting `main`, and manual dispatch. It contains three jobs:
+## Security considerations
 
-1. **Format and Validate:** Terraform formatting; provider initialization without the backend; root and bootstrap validation.
-2. **Trivy IaC Security Scan:** HIGH/CRITICAL Terraform configuration findings, via a version- and digest-pinned official container image.
-3. **Gitleaks Secret Scan:** scans Git history for potential committed secrets.
+The database is private and encrypted, database ingress is limited to the task security group, and RDS requires SSL. Wiki.js sets `DB_SSL=true`, which enables certificate verification in the selected application version. Trust of the RDS certificate chain has not been established by runtime testing. Supply and test an appropriate trusted CA before relying on this connection; do not disable certificate verification to make it connect.
 
-The workflow performs **no `terraform plan`, `apply`, or AWS deployment**. Gitleaks passing does not prove that credentials have never been exposed; previously exposed credentials must be rotated if they remain active.
+Three resource-scoped Trivy exceptions remain documented in source: public ALB exposure (`AWS-0053`), outbound IPv4 HTTPS from tasks for public registries and APIs (`AWS-0104`), and SSE-S3 for the state bucket (`AWS-0132`). Review application advisories separately from IaC findings. The image pin provides reproducibility; the current CI does not scan application dependencies inside that image.
 
-## Security decisions and accepted risks
+## Remaining verification
 
-Hardening measures in the code include HTTPS at the ALB, a private RDS instance with storage encryption and configured SSL enforcement, RDS-managed Secrets Manager credentials, reduced outbound Security Group permissions, and an encrypted/versioned S3 backend definition.
+An AWS deployment has not been verified as part of this work. The highest-value next checks are:
 
-Three resource-scoped Trivy suppressions are intentional and documented in Terraform:
+1. Run the pinned Wiki.js image against PostgreSQL 17 locally. Test initial setup, guest authorization, persistent page storage, `/healthz`, and TLS with both trusted and untrusted CAs.
+2. Change the local database password, force a new connection, then recreate the application with the new credential. Verify recovery and retained data.
+3. In a temporary AWS deployment, verify backend locking, DNS/ACM, task startup, RDS certificate trust, and a real managed-secret rotation. Observe the event, workflow, replacement task, target health, and page read separately.
 
-| Trivy rule | Resource | Reason and remaining risk |
-| --- | --- | --- |
-| `AWS-0053` | Internet-facing ALB | Public access is intentional. Port 80 redirects to HTTPS on 443; public exposure remains by design. |
-| `AWS-0104` | ECS task Security Group | Outbound TCP 443 to any IPv4 destination is currently needed for public image pulls and external HTTPS APIs through NAT; destinations remain unrestricted. |
-| `AWS-0132` | S3 state-bucket encryption | SSE-S3 (AES256) is used for the cost-conscious portfolio backend. A customer-managed KMS key would provide additional key controls but has not been configured. |
-
-These suppressions represent **documented risk acceptance, not remediation** of the underlying findings.
-
-## Known limitations and next improvements
-
-- **Runtime not verified:** no AWS apply, end-to-end application test, database TLS verification, DNS/ACM integration test, or recovery test has been completed in this hardening phase.
-- **Database:** currently single-AZ with `skip_final_snapshot = true`. Configure appropriate backups, deletion safeguards, and recovery policy before production; using the RDS master account for the application should also be revisited.
-- **Networking:** reduce ECS outbound destinations further (for example, a controlled image registry/ECR path and private endpoints). VPC endpoint private DNS and region-derived AZs are configured but not deployment-tested.
-- **Application delivery:** images are pinned by digest; assess updates regularly, confirm health-check behavior, and test deployment sequencing.
-## RDS password rotation and ECS refresh
-
-RDS manages the database master secret and rotates it by default about every seven days. ECS resolves the injected database password when a task starts; an already-running task **does not automatically receive the rotated password**.
-
-`rotation.tf` defines a scoped, event-driven refresh:
-
-1. Secrets Manager publishes the native `Secret Label Updated` event when `AWSCURRENT` moves to a new version.
-2. An EventBridge rule matches **only the specific RDS-managed secret ARN** and the `AWSCURRENT` label.
-3. EventBridge starts an AWS Step Functions Standard workflow using a limited IAM role.
-4. The workflow waits 30 seconds then calls `ecs:UpdateService` with `ForceNewDeployment = true`. Its IAM role is limited to that ECS service.
-
-The workflow neither reads nor logs the password. It does not guarantee zero downtime, especially with a single ECS task. Event delivery, IAM permissions, database readiness, actual task replacement, and operational alerts still require validation in AWS. If an event is missed or automation fails, manually force a new ECS deployment, check CloudWatch/ECS logs, and confirm healthy database connectivity. Do not rotate a live database without an application recovery plan.
-
-- **Availability and operations:** add appropriate autoscaling, alerts, cost controls, and infrastructure lifecycle procedures according to real workload requirements.
-- **State operations:** confirm remote backend initialization, locking, bootstrap-state preservation, and state recovery in an authorized AWS environment.
-
-The intent is to demonstrate reviewable Terraform and security trade-offs, **not** to claim a production-ready deployment without operational evidence.
-
----
-
-**Contact:** shimon066536@gmail.com · [LinkedIn](https://www.linkedin.com/in/shimon-devops-growth/)
+See [Issue #1](https://github.com/shimon066536/wikijs-infra/issues/1) for the original hardening and verification work.
