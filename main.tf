@@ -1,14 +1,15 @@
 
 module "vpc" {
-  source             = "./modules/vpc"
-  region             = var.region
-  security_group_ids = module.security.security_group_ids
+  source                     = "./modules/vpc"
+  region                     = var.region
+  endpoint_security_group_id = module.security.endpoint_security_group_id
 }
 
 module "security" {
   source               = "./modules/security"
   vpc_id               = module.vpc.vpc_id
   private_subnet_cidrs = module.vpc.private_subnet_cidrs
+  allowed_client_cidrs = var.allowed_client_cidrs
 }
 
 module "alb" {

@@ -65,11 +65,17 @@ resource "aws_ecs_task_definition" "wiki" {
 }
 
 resource "aws_ecs_service" "wiki" {
-  name            = "${var.name}-svc"
-  cluster         = aws_ecs_cluster.this.id
-  task_definition = aws_ecs_task_definition.wiki.arn
-  launch_type     = "FARGATE"
-  desired_count   = 1
+  name                              = "${var.name}-svc"
+  cluster                           = aws_ecs_cluster.this.id
+  task_definition                   = aws_ecs_task_definition.wiki.arn
+  launch_type                       = "FARGATE"
+  desired_count                     = 1
+  health_check_grace_period_seconds = 120
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
 
   network_configuration {
     subnets          = var.private_subnets

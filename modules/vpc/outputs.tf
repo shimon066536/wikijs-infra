@@ -3,7 +3,8 @@ output "public_subnet_ids" {
 }
 
 output "private_subnet_ids" {
-  value = local.private_subnet_ids
+  value      = local.private_subnet_ids
+  depends_on = [aws_route_table_association.private_a, aws_route_table_association.private_b]
 }
 
 output "vpc_id" {

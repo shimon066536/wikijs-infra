@@ -31,11 +31,6 @@ variable "db_port" {
   default     = 5432
   description = "Port of the database"
 }
-variable "db_type" {
-  type        = string
-  default     = "postgres"
-  description = "Type of the database (e.g. postgres)"
-}
 variable "db_name" {
   type        = string
   default     = "wikijs"

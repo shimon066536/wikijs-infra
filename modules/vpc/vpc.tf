@@ -78,6 +78,8 @@ resource "aws_route_table_association" "public_b" {
 
 # private
 resource "aws_nat_gateway" "nat" {
+  depends_on = [aws_internet_gateway.igw]
+
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.public_a.id
 
@@ -140,7 +142,7 @@ resource "aws_vpc_endpoint" "logs" {
   vpc_endpoint_type   = "Interface"
   private_dns_enabled = true
   subnet_ids          = local.private_subnet_ids
-  security_group_ids  = [var.security_group_ids]
+  security_group_ids  = [var.endpoint_security_group_id]
 }
 
 resource "aws_vpc_endpoint" "secretsmanager" {
@@ -149,5 +151,5 @@ resource "aws_vpc_endpoint" "secretsmanager" {
   vpc_endpoint_type   = "Interface"
   private_dns_enabled = true
   subnet_ids          = local.private_subnet_ids
-  security_group_ids  = [var.security_group_ids]
+  security_group_ids  = [var.endpoint_security_group_id]
 }
