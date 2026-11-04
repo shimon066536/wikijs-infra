@@ -11,11 +11,11 @@ run "restricted_setup_access" {
     allowed_client_cidrs = ["192.0.2.10/32"]
   }
   assert {
-    condition     = alltrue([for rule in aws_security_group.alb_sg.ingress : rule.cidr_blocks == toset(["192.0.2.10/32"])])
+    condition     = alltrue([for rule in aws_security_group.alb_sg.ingress : toset(rule.cidr_blocks) == toset(["192.0.2.10/32"])])
     error_message = "Initial ALB access must stay restricted to the operator."
   }
   assert {
-    condition     = alltrue([for rule in aws_security_group.rds_sg.ingress : rule.from_port == 5432 && length(rule.cidr_blocks) == 0])
+    condition     = alltrue([for rule in aws_security_group.rds_sg.ingress : rule.from_port == 5432 && length(coalesce(rule.cidr_blocks, [])) == 0])
     error_message = "Database ingress must use security groups and PostgreSQL only."
   }
 }
