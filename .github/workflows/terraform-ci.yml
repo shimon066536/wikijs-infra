@@ -21,12 +21,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4
         with:
           terraform_version: "1.14.6"
 
@@ -47,13 +47,20 @@ jobs:
         working-directory: bootstrap/state-backend
         run: terraform validate -no-color
 
+      - name: Test Terraform with mocked AWS provider
+        run: terraform test -no-color
+
+      - name: Test backend bootstrap with mocked AWS provider
+        working-directory: bootstrap/state-backend
+        run: terraform test -no-color
+
   iac-security:
     name: Trivy IaC Security Scan
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
 
@@ -72,7 +79,7 @@ jobs:
 
     steps:
       - name: Checkout repository history
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           persist-credentials: false
