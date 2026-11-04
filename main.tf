@@ -35,7 +35,7 @@ module "iam" {
 module "ecs" {
   source             = "./modules/ecs"
   name               = var.name
-  image              = "requarks/wiki:2.5.314@sha256:68f0d1848261ae76492ba358e30a96a76fed5d97a3fff381656082bf90f70d7e"
+  image              = "requarks/wiki:2.5.317@sha256:e4708eed80c014449c0c8426c8d466c7a52a62131555bb44372fa48378b448b8"
   execution_role_arn = module.iam.ecs_task_execution_role_arn
   private_subnets    = module.vpc.private_subnet_ids
   service_sg         = module.security.ecs_tasks_sg_id

@@ -10,6 +10,11 @@ resource "aws_ecs_task_definition" "wiki" {
   memory                   = "1024"
   execution_role_arn       = var.execution_role_arn
 
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "X86_64"
+  }
+
   container_definitions = jsonencode([
     {
       name  = "wiki"
